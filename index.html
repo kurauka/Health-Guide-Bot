@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jasiri Health Education Chatbot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+  <style>
+    .chat-message {
+      transition: all 0.3s ease;
+    }
+    
+    .user-message {
+      background-color: #e9f5fe;
+      border-radius: 18px 18px 0 18px;
+    }
+    
+    .bot-message {
+      background-color: #f1f5f9;
+      border-radius: 18px 18px 18px 0;
+    }
+    
+    .typing-indicator {
+      display: inline-block;
+    }
+    
+    .typing-indicator span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: #dc2626;
+      border-radius: 50%;
+      margin-right: 5px;
+      animation: bounce 1.5s infinite ease-in-out;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+      animation-delay: 0.4s;
+      margin-right: 0;
+    }
+    
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-6px); }
+    }
+    
+    .scroll-smooth {
+      scroll-behavior: smooth;
+    }
+    
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 20px;
+    }
+    
+    /* Scroll to bottom button */
+    .scroll-bottom-btn {
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+    
+    .scroll-bottom-btn.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-red-600 to-red-500 text-white p-4 shadow-md">
+    <div class="container mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <img src="/api/placeholder/100/100" alt="Jasiri Scout Logo" class="h-10 w-10 rounded-full border-2 border-white">
+        <div>
+          <h1 class="text-xl font-bold">Jasiri Health Guide</h1>
+          <p class="text-xs opacity-75">Reproductive Health Education Bot</p>
+        </div>
+      </div>
+      <button id="info-button" class="p-2 rounded-full hover:bg-red-700 transition">
+        <i class="fas fa-info-circle"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 container mx-auto p-4 flex flex-col md:flex-row gap-4">
+    <!-- Left Sidebar - Topics -->
+    <div class="md:w-1/4 bg-white p-4 rounded-lg shadow-md hidden md:block">
+      <h2 class="font-bold text-lg mb-3 text-red-600">Learning Topics</h2>
+      <ul class="space-y-2">
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-exclamation-triangle text-red-600 mr-2"></i> Early Marriage Risks</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-shield-alt text-red-600 mr-2"></i> Safe Sexual Practices</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-baby text-red-600 mr-2"></i> Teenage Pregnancy</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-virus text-red-600 mr-2"></i> HIV and AIDS Facts</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-ban text-red-600 mr-2"></i> Common Myths</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-heart text-red-600 mr-2"></i> Healthy Relationships</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-user-md text-red-600 mr-2"></i> Access to Healthcare</button></li>
+      </ul>
+      
+      <h2 class="font-bold text-lg mt-6 mb-3 text-red-600">Resources</h2>
+      <ul class="space-y-2">
+        <li><button class="w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-book text-red-600 mr-2"></i> Educational Materials</button></li>
+        <li><button class="w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-phone text-red-600 mr-2"></i> Helpline Numbers</button></li>
+        <li><button class="w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-clinic-medical text-red-600 mr-2"></i> Nearby Clinics</button></li>
+      </ul>
+    </div>
+    
+    <!-- Chat Area -->
+    <div class="flex-1 flex flex-col bg-white rounded-lg shadow-md overflow-hidden">
+      <!-- Chat Messages -->
+      <div id="chat-messages" class="flex-1 p-4 overflow-y-auto custom-scrollbar scroll-smooth relative">
+        <div class="chat-message bot-message p-3 mb-4 mr-auto shadow-sm" style="max-width: 75%;">
+          <div class="flex items-start gap-2">
+            <div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white">
+              <i class="fas fa-robot"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-gray-800">Hello! I'm your Jasiri Scout Reproductive Health Education guide. How can I help you learn about reproductive health today?</p>
+            </div>
+          </div>
+        </div>
+        <!-- Messages will be added here -->
+        
+        <!-- Scroll to bottom button -->
+        <div id="scroll-bottom" class="scroll-bottom-btn fixed bottom-24 right-8 bg-red-600 text-white p-3 rounded-full shadow-lg z-10">
+          <i class="fas fa-chevron-down"></i>
+        </div>
+      </div>
+      
+      <!-- Quick Suggestions -->
+      <div class="px-4 py-2 border-t border-gray-200">
+        <div class="flex flex-wrap gap-2 mb-2">
+          <button class="suggestion-button bg-red-50 text-red-600 px-3 py-1 rounded-full text-sm hover:bg-red-100 transition">What are early marriage risks?</button>
+          <button class="suggestion-button bg-red-50 text-red-600 px-3 py-1 rounded-full text-sm hover:bg-red-100 transition">Teenage pregnancy problems</button>
+          <button class="suggestion-button bg-red-50 text-red-600 px-3 py-1 rounded-full text-sm hover:bg-red-100 transition">HIV prevention</button>
+          <button class="suggestion-button bg-red-50 text-red-600 px-3 py-1 rounded-full text-sm hover:bg-red-100 transition">Common myths about sex</button>
+        </div>
+      </div>
+      
+      <!-- Input Area -->
+      <div class="p-4 border-t border-gray-200">
+        <form id="chat-form" class="flex items-center gap-2">
+          <input id="user-input" type="text" placeholder="Type your question here..." class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+          <button type="submit" class="bg-red-600 text-white p-3 rounded-lg hover:bg-red-700 transition">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Right Sidebar - Additional Information -->
+    <div class="md:w-1/4 bg-white p-4 rounded-lg shadow-md hidden lg:block">
+      <h2 class="font-bold text-lg mb-3 text-red-600">About This Program</h2>
+      <p class="text-gray-700 mb-4">This chatbot is designed to support the Jasiri Sexual Reproductive Health Badge program, providing information on reproductive health topics for Scout members.</p>
+      
+      <h3 class="font-bold text-md mb-2 text-red-600">Badge Requirements:</h3>
+      <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
+        <li>Research early marriage issues</li>
+        <li>Learn about dangers of early sexual activity</li>
+        <li>Understand teenage pregnancy risks</li>
+        <li>Design educational programs</li>
+        <li>Dispel myths about sex and reproductive health</li>
+        <li>Create community benefit projects</li>
+      </ul>
+      
+      <div class="mt-6 p-3 bg-red-50 rounded-lg">
+        <h3 class="font-bold text-md mb-2 text-red-600">Need More Help?</h3>
+        <p class="text-sm text-gray-700">Contact your local Scout leader or health educator for additional guidance and resources.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Menu Toggle -->
+  <div class="md:hidden fixed bottom-20 right-4 z-10">
+    <button id="mobile-menu-toggle" class="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-20 hidden flex justify-center items-center">
+    <div class="bg-white rounded-lg w-4/5 max-h-4/5 overflow-y-auto p-4">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-bold text-lg text-red-600">Jasiri Health Guide Menu</h2>
+        <button id="close-mobile-menu" class="text-gray-500 hover:text-gray-800">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <h3 class="font-bold text-md mb-2 text-red-600">Learning Topics</h3>
+      <ul class="space-y-2 mb-4">
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-exclamation-triangle text-red-600 mr-2"></i> Early Marriage Risks</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-shield-alt text-red-600 mr-2"></i> Safe Sexual Practices</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-baby text-red-600 mr-2"></i> Teenage Pregnancy</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-virus text-red-600 mr-2"></i> HIV and AIDS Facts</button></li>
+        <li><button class="topic-button w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-ban text-red-600 mr-2"></i> Common Myths</button></li>
+      </ul>
+      
+      <h3 class="font-bold text-md mb-2 text-red-600">Resources</h3>
+      <ul class="space-y-2">
+        <li><button class="w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-book text-red-600 mr-2"></i> Educational Materials</button></li>
+        <li><button class="w-full text-left p-2 rounded hover:bg-red-50 transition flex items-center"><i class="fas fa-phone text-red-600 mr-2"></i> Helpline Numbers</button></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Info Modal -->
+  <div id="info-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-30 hidden flex justify-center items-center">
+    <div class="bg-white rounded-lg w-4/5 max-w-lg p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-bold text-xl text-red-600">About Jasiri Health Guide</h2>
+        <button id="close-info-modal" class="text-gray-500 hover:text-gray-800">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="prose">
+        <p>This chatbot is designed to provide educational information on sexual reproductive health topics for the Jasiri Scout Programme. It follows the guidelines of the Sexual Reproductive Health Badge (Compulsory) as outlined in the Jasiri Scout Programme Handbook.</p>
+        
+        <h3 class="font-bold text-md mt-4 mb-2 text-red-600">Badge Requirements:</h3>
+        <ul class="list-disc pl-5">
+          <li>Research problems associated with early marriages</li>
+          <li>Present information on dangers of early sexual engagement</li>
+          <li>Explain problems associated with teenage pregnancy</li>
+          <li>Design reproductive health education programs</li>
+          <li>Highlight and dispel myths about sex, sexuality, HIV, AIDS and pregnancy</li>
+          <li>Design community benefit projects in reproductive health education</li>
+        </ul>
+        
+        <p class="mt-4 text-sm text-gray-600">Note: This chatbot provides educational information only and should not replace professional medical advice. For personal health concerns, please consult a healthcare provider.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const closeMobileMenu = document.getElementById('close-mobile-menu');
+    const infoButton = document.getElementById('info-button');
+    const infoModal = document.getElementById('info-modal');
+    const closeInfoModal = document.getElementById('close-info-modal');
+    const suggestionButtons = document.querySelectorAll('.suggestion-button');
+    const topicButtons = document.querySelectorAll('.topic-button');
+    const scrollBottomBtn = document.getElementById('scroll-bottom');
+
+    // Fixed API endpoint with key
+    const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDqcZHYRtufGxHuy4RGrFKe05aIUL96E6s";
+
+    // Context setup for the Gemini API
+    const reproductiveHealthContext = `
+    You are a health education chatbot for the Jasiri Scout Programme, focusing on reproductive health education.
+    Your responses should be educational, factual, and appropriate for teenagers.
+    Focus on the following key areas:
+    1. Early marriage risks and problems
+    2. Dangers of early sexual engagement
+    3. Teenage pregnancy risks and consequences
+    4. Reproductive health education
+    5. Myths and misconceptions about sex, sexuality, HIV, AIDS, and pregnancy
+    6. Designing educational programs and community benefit projects
+    
+    Maintain a respectful, informative tone. Avoid overly clinical language but provide accurate information.
+    For sensitive topics, emphasize safety, consent, and healthy decision-making.
+    Your goal is to educate young people in line with the Jasiri Scout Sexual Reproductive Health Badge requirements.
+    `;
+
+    // Scroll handling
+    let isUserScrolling = false;
+    let isScrollButtonVisible = false;
+
+    chatMessages.addEventListener('scroll', () => {
+      isUserScrolling = true;
+      
+      // Check if user has scrolled up
+      const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 100;
+      
+      if (!isAtBottom && !isScrollButtonVisible) {
+        scrollBottomBtn.classList.add('visible');
+        isScrollButtonVisible = true;
+      } else if (isAtBottom && isScrollButtonVisible) {
+        scrollBottomBtn.classList.remove('visible');
+        isScrollButtonVisible = false;
+      }
+      
+      // Reset the flag after a delay
+      setTimeout(() => {
+        isUserScrolling = false;
+      }, 100);
+    });
+
+    scrollBottomBtn.addEventListener('click', () => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    // Gemini API Implementation
+    async function getGeminiResponse(prompt) {
+      try {
+        const payload = {
+          contents: [{
+            parts: [{
+              text: `${reproductiveHealthContext}
+              
+              User question: ${prompt}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 800,
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
+        };
+
+        const response = await fetch(GEMINI_API_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Check if we have valid response data
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+          return data.candidates[0].content.parts[0].text;
+        } else {
+          throw new Error("Invalid response format from Gemini API");
+        }
+      } catch (error) {
+        console.error("Error calling Gemini API:", error);
+        return "I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
+      }
+    }
+
+    // Add message to chat - Modified to put user messages on right, bot messages on left
+    function addMessage(message, isUser = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add(
+        'chat-message', 
+        isUser ? 'user-message' : 'bot-message',
+        'p-3',
+        'mb-4',
+        'shadow-sm'
+      );
+      
+      // Position based on sender
+      if (isUser) {
+        messageDiv.classList.add('ml-auto');
+        messageDiv.style.maxWidth = '75%';
+        
+        // Simple text for user message
+        const paragraph = document.createElement('p');
+        paragraph.classList.add('text-gray-800');
+        paragraph.innerText = message;
+        messageDiv.appendChild(paragraph);
+      } else {
+        messageDiv.classList.add('mr-auto');
+        messageDiv.style.maxWidth = '75%';
+        
+        // Add avatar and text container for bot messages
+        const messageContent = document.createElement('div');
+        messageContent.classList.add('flex', 'items-start', 'gap-2');
+        
+        const avatar = document.createElement('div');
+        avatar.classList.add('w-8', 'h-8', 'rounded-full', 'bg-red-600', 'flex', 'items-center', 'justify-center', 'text-white');
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+        
+        const textContainer = document.createElement('div');
+        textContainer.classList.add('flex-1');
+        
+        const paragraph = document.createElement('p');
+        paragraph.classList.add('text-gray-800');
+        paragraph.innerText = message;
+        
+        textContainer.appendChild(paragraph);
+        messageContent.appendChild(avatar);
+        messageContent.appendChild(textContainer);
+        messageDiv.appendChild(messageContent);
+      }
+      
+      chatMessages.appendChild(messageDiv);
+      
+      // Auto scroll to bottom only if user is not actively scrolling
+      if (!isUserScrolling) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (isScrollButtonVisible) {
+          scrollBottomBtn.classList.remove('visible');
+          isScrollButtonVisible = false;
+        }
+      }
+    }
+
+    // Add typing indicator
+    function addTypingIndicator() {
+      const indicatorDiv = document.createElement('div');
+      indicatorDiv.id = 'typing-indicator';
+      indicatorDiv.classList.add(
+        'chat-message', 
+        'bot-message',
+        'p-3',
+        'mb-4',
+        'shadow-sm',
+        'mr-auto'
+      );
+      indicatorDiv.style.maxWidth = '75%';
+      
+      const messageContent = document.createElement('div');
+      messageContent.classList.add('flex', 'items-start', 'gap-2');
+      
+      const avatar = document.createElement('div');
+      avatar.classList.add('w-8', 'h-8', 'rounded-full', 'bg-red-600', 'flex', 'items-center', 'justify-center', 'text-white');
+      avatar.innerHTML = '<i class="fas fa-robot"></i>';
+      
+      const typingDiv = document.createElement('div');
+      typingDiv.classList.add('typing-indicator');
+      typingDiv.innerHTML = '<span></span><span></span><span></span>';
+      
+      messageContent.appendChild(avatar);
+      messageContent.appendChild(typingDiv);
+      indicatorDiv.appendChild(messageContent);
+      chatMessages.appendChild(indicatorDiv);
+      
+      // Auto scroll to bottom only if user is not actively scrolling
+      if (!isUserScrolling) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (isScrollButtonVisible) {
+          scrollBottomBtn.classList.remove('visible');
+          isScrollButtonVisible = false;
+        }
+      }
+    }
+
+    // Remove typing indicator
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typing-indicator');
+      if (indicator) {
+        indicator.remove();
+      }
+    }
+
+    // Handle form submission
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = userInput.value.trim();
+      if (message) {
+        // Add user message
+        addMessage(message, true);
+        userInput.value = '';
+        
+        // Show typing indicator
+        addTypingIndicator();
+        
+        // Get response from Gemini API
+        try {
+          const response = await getGeminiResponse(message);
+          removeTypingIndicator();
+          addMessage(response);
+        } catch (error) {
+          removeTypingIndicator();
+          addMessage("I'm having trouble processing your request. Please try again later.");
+          console.error(error);
+        }
+      }
+    });
+
+    // Handle suggestion buttons
+    suggestionButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const message = button.innerText;
+        userInput.value = message;
+        chatForm.dispatchEvent(new Event('submit'));
+      });
+    });
+
+    // Handle topic buttons
+    topicButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const topic = button.innerText;
+        userInput.value = `Tell me about ${topic}`;
+        chatForm.dispatchEvent(new Event('submit'));
+        if (mobileMenu.classList.contains('flex')) {
+          mobileMenu.classList.replace('flex', 'hidden');
+        }
+      });
+    });
+
+    // Mobile menu toggle
+    mobileMenuToggle.addEventListener('click', () => {
+      mobileMenu.classList.replace('hidden', 'flex');
+    });
+
+    closeMobileMenu.addEventListener('click', () => {
+      mobileMenu.classList.replace('flex', 'hidden');
+    });
+
+    // Info modal toggle
+    infoButton.addEventListener('click', () => {
+      infoModal.classList.replace('hidden', 'flex');
+    });
+
+    closeInfoModal.addEventListener('click', () => {
+      infoModal.classList.replace('flex', 'hidden');
+    });
+
+    // Close modals when clicking outside
+    window.addEventListener('click', (e) => {
+      if (e.target === mobileMenu) {
+        mobileMenu.classList.replace('flex', 'hidden');
+      }
+      if (e.target === infoModal) {
+        infoModal.classList.replace('flex', 'hidden');
+      }
+    });
+
+    // Focus input on page load
+    window.addEventListener('load', () => {
+      userInput.focus();
+    });
+  </script>
+</body>
+</html>
